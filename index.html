@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pose détecteurs CO</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0b6bcb">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pose CO">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#f4f5f7; --card:#ffffff; --text:#1b1f24; --muted:#6a7380; --line:#dfe3e8;
+  --accent:#0b6bcb; --accent-text:#ffffff; --ok:#1a7f4b; --warn:#b26a00; --err:#c62828; --chip:#e8f0fb;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#111418; --card:#1b2026; --text:#eceff3; --muted:#98a2b0; --line:#2c333c;
+    --accent:#4d9bf0; --accent-text:#08121f; --ok:#4cc38a; --warn:#e5a54b; --err:#ef6b6b; --chip:#1f2c3d;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#111418; --card:#1b2026; --text:#eceff3; --muted:#98a2b0; --line:#2c333c;
+  --accent:#4d9bf0; --accent-text:#08121f; --ok:#4cc38a; --warn:#e5a54b; --err:#ef6b6b; --chip:#1f2c3d;
+  color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+.wrap{max-width:560px;margin:0 auto;padding:12px 12px 90px}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:4px 0 10px}
+h1{font-size:19px;margin:0}
+.tabs{display:flex;gap:6px;margin-bottom:12px}
+.tab{flex:1;padding:11px 2px;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:10px;font-size:13px;font-weight:600}
+.tab.on{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px}
+.card h2{font-size:14px;margin:0 0 8px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;display:flex;justify-content:space-between;align-items:center}
+.row{display:flex;gap:8px}
+input[type=text],input[type=number],input:not([type]){flex:1;min-width:0;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);font-size:17px}
+input:focus{outline:2px solid var(--accent);outline-offset:0}
+button{font:inherit;cursor:pointer}
+.btn{padding:12px 14px;border-radius:10px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-text);font-weight:700;white-space:nowrap}
+.btn.sec{background:transparent;color:var(--accent)}
+.btn.danger{background:transparent;color:var(--err);border-color:var(--err)}
+.btn[disabled]{opacity:.45}
+.btn.big{width:100%;padding:16px;font-size:18px}
+.small{font-size:13px;color:var(--muted)}
+.ok{color:var(--ok)} .warn{color:var(--warn)} .err{color:var(--err)}
+.chip{display:inline-block;background:var(--chip);color:var(--accent);border-radius:999px;padding:2px 10px;font-size:12px;font-weight:700}
+.rec{border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:8px;background:var(--card)}
+.rec b{font-size:17px}
+.rec .meta{font-size:13px;color:var(--muted);word-break:break-all}
+.rec .acts{display:flex;gap:8px;margin-top:8px}
+.rec .acts .btn{padding:8px 12px;font-size:14px}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px))}
+.bar .in{max-width:560px;margin:0 auto}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(90px + env(safe-area-inset-bottom,0px));background:var(--text);color:var(--bg);padding:10px 14px;border-radius:10px;font-size:14px;max-width:90%;display:none;z-index:50}
+#ov{position:fixed;inset:0;background:#000;z-index:40;display:none;flex-direction:column}
+#ov .top{display:flex;justify-content:space-between;align-items:center;color:#fff;padding:calc(12px + env(safe-area-inset-top,0px)) 14px 10px;font-weight:700}
+#ov .top button{background:#fff;color:#000;border:0;border-radius:10px;padding:10px 14px;font-weight:700}
+#reader{flex:1;min-height:0;width:100%}
+#ov .hint{color:#ddd;text-align:center;padding:10px 14px calc(14px + env(safe-area-inset-bottom,0px));font-size:14px}
+#ov .hint label{display:inline-block;margin-top:8px;background:#fff;color:#000;border-radius:10px;padding:10px 14px;font-weight:700}
+details summary{cursor:pointer;font-weight:600}
+label.sw{display:flex;align-items:center;gap:8px;margin:6px 0}
+.gpsrow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.raw{margin-top:6px;word-break:break-all}
+.fld{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);font-size:16px;margin-bottom:8px}
+.chipc{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--bg)}
+.chipc button{border:0;background:transparent;color:var(--text);padding:7px 11px;font-size:14px}
+.chipc .cx{color:var(--err);border-left:1px solid var(--line);font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🔥 Pose détecteurs CO</h1>
+    <span class="chip" id="count">0 enreg.</span>
+  </header>
+  <div class="tabs">
+    <button class="tab on" id="tabNew">Saisie</button>
+    <button class="tab" id="tabList">Enreg.</button>
+    <button class="tab" id="tabLst">Liste</button>
+    <button class="tab" id="tabSt">Stats</button>
+  </div>
+
+  <!-- SAISIE -->
+  <div id="viewNew">
+    <div class="card">
+      <h2>Entreprise</h2>
+      <div class="row"><input id="ent" placeholder="Nom de l'entreprise" list="entList" autocomplete="off"></div>
+      <datalist id="entList"></datalist>
+      <div id="entChips" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px"></div>
+      <div class="small" style="margin-top:6px">Touchez un nom pour le choisir, × pour le retirer de la liste.</div>
+    </div>
+
+    <div class="card">
+      <h2>1 · Référence (code de la facture) <span id="stRef"></span></h2>
+      <div class="row">
+        <input id="ref" placeholder="Référence abonné" inputmode="text" autocomplete="off">
+        <button class="btn" id="scRef">Scanner</button>
+      </div>
+      <div class="small raw" id="rawRef"></div>
+      <div id="refSug" style="margin-top:8px"></div>
+      <div id="refStatus" style="margin-top:8px"></div>
+      <label class="sw" id="okWrap" style="display:none"><input type="checkbox" id="okManual" style="flex:none;width:22px;height:22px"> <span id="okTxt"></span></label>
+    </div>
+
+    <div class="card">
+      <h2>2 · Code-barres appareil 1 <span id="stC1"></span></h2>
+      <div class="row">
+        <input id="c1" placeholder="Code appareil 1" autocomplete="off">
+        <button class="btn" id="sc1">Scanner</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>3 · Code-barres appareil 2 <span id="stC2"></span></h2>
+      <div class="row">
+        <input id="c2" placeholder="Code appareil 2" autocomplete="off">
+        <button class="btn" id="sc2">Scanner</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Position GPS <span id="stGps" class="small">…</span></h2>
+      <div class="small" id="gpsLive">Recherche de la position…</div>
+      <div class="gpsrow">
+        <input id="lat" placeholder="Latitude" inputmode="decimal">
+        <input id="lon" placeholder="Longitude" inputmode="decimal">
+      </div>
+      <div class="small" style="margin-top:6px">Laissez vide : la position est prise automatiquement à l'enregistrement. Remplissez pour saisir à la main.</div>
+      <div class="row" style="margin-top:8px"><button class="btn sec" id="gpsRefresh">Actualiser la position</button></div>
+    </div>
+
+    <details class="card">
+      <summary>Réglages</summary>
+      <label class="sw"><input type="checkbox" id="chain" checked style="flex:none;width:20px;height:20px"> Enchaîner automatiquement les scans</label>
+      <div class="small" style="margin:8px 0 4px">Extraction de la référence depuis le QR (regex, optionnel — le 1<sup>er</sup> groupe capturé est utilisé). Ex : <code>ref=(\d+)</code></div>
+      <input id="rx" placeholder="(laisser vide = automatique)">
+    </details>
+  </div>
+
+  <!-- LISTE -->
+  <div id="viewList" style="display:none">
+    <div class="card">
+      <label class="btn sec" style="display:block;text-align:center">📥 Importer des enregistrements (Excel)<input type="file" id="impFile" accept=".xlsx,.xls,.csv,.ods" style="display:none"></label>
+      <div class="small" style="margin-top:6px">Fusionner les données saisies sur d'autres appareils (fichier exporté par cette application).</div>
+      <div id="impPrev" style="display:none;margin-top:10px">
+        <div id="impInfo"></div>
+        <div class="small" style="margin:8px 0 4px">Si la référence existe déjà :</div>
+        <select id="impDup" class="fld"><option value="keep">Garder l'enregistrement existant</option><option value="rep">Remplacer par celui du fichier</option></select>
+        <div class="small" style="margin:4px 0">Date à attribuer aux lignes sans date :</div>
+        <input type="date" id="impDate" class="fld">
+        <div class="row"><button class="btn" id="impOk" style="flex:1">Importer</button><button class="btn sec" id="impCancel" style="flex:1">Annuler</button></div>
+      </div>
+      <div id="impRes" class="small" style="margin-top:8px"></div>
+    </div>
+    <div id="list"></div>
+    <div class="card" id="listActs">
+      <div class="row"><button class="btn sec" id="selAll" style="flex:1">Tout sélectionner</button><button class="btn danger" id="delSel" style="flex:1" disabled>Supprimer la sélection (0)</button></div>
+      <div style="height:10px"></div>
+      <div class="row">
+        <button class="btn" id="exp" style="flex:1">Exporter Excel (.xlsx)</button>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn danger" id="clr" style="flex:1">Tout supprimer</button>
+      </div>
+      <div class="small" style="margin-top:8px">Colonnes : référence, code1, code2, longitude, latitude, entreprise, statut (liste), date.</div>
+    </div>
+  </div>
+  <!-- LISTE -->
+  <div id="viewLst" style="display:none">
+    <div class="card">
+      <h2>Liste des références à équiper</h2>
+      <div id="lstStats">Aucune liste importée : la vérification est désactivée.</div>
+      <div class="small" style="margin:8px 0">Le fichier Excel / CSV contient la colonne des références des abonnés qui n'ont pas encore de détecteurs.</div>
+      <label class="btn" style="display:block;text-align:center">📂 Importer un fichier Excel / CSV<input type="file" id="lstFile" accept=".xlsx,.xls,.csv,.ods" style="display:none"></label>
+    </div>
+    <div class="card" id="lstPrev" style="display:none">
+      <h2>Aperçu de l'import</h2>
+      <div class="small" id="lstName"></div>
+      <div class="small" style="margin:8px 0 4px">Colonne des références :</div>
+      <select id="lstCol" style="width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);font-size:16px"></select>
+      <label class="sw"><input type="checkbox" id="lstHead" style="flex:none;width:20px;height:20px"> La 1<sup>re</sup> ligne est un en-tête</label>
+      <label class="sw"><input type="checkbox" id="lstAdd" style="flex:none;width:20px;height:20px"> Ajouter à la liste existante (sinon elle est remplacée)</label>
+      <div class="small" id="lstCount"></div>
+      <div class="row" style="margin-top:10px"><button class="btn" id="lstOk" style="flex:1">Importer</button><button class="btn sec" id="lstCancel" style="flex:1">Annuler</button></div>
+    </div>
+    <div class="card" id="lstActs" style="display:none">
+      <button class="btn" id="lstRem" style="width:100%">Exporter la base mise à jour (sans les références posées)</button>
+      <div style="height:8px"></div>
+      <button class="btn danger" id="lstClr" style="width:100%">Supprimer la liste</button>
+    </div>
+  </div>
+  <!-- STATS -->
+  <div id="viewSt" style="display:none">
+    <div class="card">
+      <h2>Période et entreprise</h2>
+      <select id="stMode" class="fld"><option value="day">Jour</option><option value="month">Mois</option><option value="year">Année</option><option value="all">Complet</option></select>
+      <input type="date" id="stDay" class="fld">
+      <input type="month" id="stMonth" class="fld" style="display:none">
+      <select id="stYear" class="fld" style="display:none"></select>
+      <select id="stEnt" class="fld"></select>
+    </div>
+    <div id="stOut"></div>
+    <div class="card"><button class="btn" id="stExp" style="width:100%">Exporter les statistiques (.xlsx)</button></div>
+  </div>
+</div>
+
+<div class="bar" id="saveBar"><div class="in">
+  <button class="btn big" id="save" disabled>Enregistrer</button>
+</div></div>
+<div id="toast"></div>
+
+<div id="ov">
+  <div class="top"><span id="ovTitle">Scanner</span><button id="ovClose">Fermer</button></div>
+  <div id="reader"></div>
+  <div class="hint" id="ovHint">
+    Cadrez le code. <br>
+    <label>📷 Prendre une photo<input type="file" accept="image/*" capture="environment" id="photo" style="display:none"></label>
+  </div>
+</div>
+<div id="readerFile" style="display:none"></div>
+
+<script src="libs/xlsx.full.min.js"></script>
+<script src="libs/html5-qrcode.min.js"></script>
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var KEY='poseCO_records_v1', SKEY='poseCO_settings_v1';
+  var records=[], companies=[], sel={}, editingId=null, lastPos=null, lastRef='', curNeed=false, curFlags={dup:false,inList:false}, listRefs=[], listNk=[], listLen=0, listFull=null, listKeys=new Set(), listName='', listDate='', pend=null, watchId=null, scanner=null, scanTarget=null, busy=false;
+
+  /* ---------- stockage ---------- */
+  function load(){
+    try{var r=localStorage.getItem(KEY); if(r) records=JSON.parse(r)||[];}catch(e){records=[]}
+    try{var s=JSON.parse(localStorage.getItem(SKEY)||'{}'); if(s.rx) $('rx').value=s.rx; if(s.chain===false) $('chain').checked=false; if(s.companies&&s.companies.length) companies=s.companies; if(s.ent) $('ent').value=s.ent;}catch(e){}
+  }
+  function persist(){try{localStorage.setItem(KEY,JSON.stringify(records))}catch(e){toast('Stockage indisponible : exportez avant de quitter')}}
+  function saveSettings(){try{localStorage.setItem(SKEY,JSON.stringify({rx:$('rx').value,chain:$('chain').checked,companies:companies,ent:$('ent').value}))}catch(e){}}
+  $('rx').addEventListener('change',saveSettings); $('chain').addEventListener('change',saveSettings);
+
+  /* ---------- utilitaires ---------- */
+  var tt;
+  function toast(m){var t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(tt);tt=setTimeout(function(){t.style.display='none'},2800)}
+  function beep(){try{if(navigator.vibrate)navigator.vibrate(80)}catch(e){}}
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+  function num(v){if(v===''||v==null)return null;var n=parseFloat(String(v).replace(',','.'));return isFinite(n)?n:null}
+
+  /* ---------- extraction de la référence ---------- */
+  function extractRef(text){
+    text=(text||'').trim();
+    var rx=$('rx').value.trim();
+    if(rx){try{var m=new RegExp(rx).exec(text); if(m) return (m[1]!==undefined?m[1]:m[0]).trim();}catch(e){toast('Regex invalide')}}
+    var seg=text.split('-');
+    if(seg.length>=3){var c15=seg.filter(function(s){return /^\d{15}$/.test(s)}); if(c15.length===1) return c15[0];}
+    try{
+      var u=new URL(text);
+      var keys=['ref','reference','référence','numero','num','id','abonne','abonné','contrat'];
+      for(var i=0;i<keys.length;i++){var v=u.searchParams.get(keys[i]); if(v) return v.trim();}
+      var parts=u.pathname.split('/').filter(Boolean); if(parts.length) return decodeURIComponent(parts[parts.length-1]);
+    }catch(e){}
+    return text;
+  }
+
+  /* ---------- validation ---------- */
+  function refresh(){
+    refStatus(); refSuggest();
+    var r=$('ref').value.trim(), a=$('c1').value.trim(), b=$('c2').value.trim();
+    $('stRef').innerHTML=r?'<span class="ok">✔</span>':''; $('stC1').innerHTML=a?'<span class="ok">✔</span>':''; $('stC2').innerHTML=b?'<span class="ok">✔</span>':'';
+    var dup=a&&b&&a===b;
+    var e=$('ent').value.trim(); $('save').disabled=!(r&&a&&b&&e)||dup||(curNeed&&!$('okManual').checked);
+    $('save').textContent=dup?'Les deux codes sont identiques':(!e?'Renseignez l\'entreprise':(curNeed&&!$('okManual').checked?'Confirmation manuelle requise':(editingId?'Mettre à jour':'Enregistrer')));
+    $('count').textContent=records.length+' enreg.';
+  }
+  ['ref','c1','c2'].forEach(function(id){$(id).addEventListener('input',refresh)});
+
+  /* ---------- GPS ---------- */
+  function startWatch(){
+    if(!navigator.geolocation){$('gpsLive').textContent='GPS indisponible — saisie manuelle.';$('stGps').textContent='';return}
+    if(watchId!==null){try{navigator.geolocation.clearWatch(watchId)}catch(e){}}
+    try{
+      watchId=navigator.geolocation.watchPosition(function(p){
+        lastPos={lat:p.coords.latitude,lon:p.coords.longitude,acc:p.coords.accuracy,t:Date.now()};
+        $('gpsLive').innerHTML='<span class="ok">●</span> '+lastPos.lat.toFixed(6)+', '+lastPos.lon.toFixed(6)+' (±'+Math.round(lastPos.acc)+' m)';
+        $('stGps').textContent='';
+      },function(e){
+        $('gpsLive').innerHTML='<span class="warn">Position non disponible ('+esc(e.message||e.code)+') — saisie manuelle possible.</span>';
+      },{enableHighAccuracy:true,maximumAge:5000,timeout:20000});
+    }catch(e){$('gpsLive').textContent='GPS indisponible — saisie manuelle.'}
+  }
+  $('gpsRefresh').addEventListener('click',function(){lastPos=null;$('gpsLive').textContent='Recherche de la position…';startWatch()});
+  function freshPosition(){
+    return new Promise(function(res){
+      if(!navigator.geolocation) return res(lastPos);
+      var done=false;
+      var to=setTimeout(function(){if(!done){done=true;res(lastPos)}},9000);
+      try{
+        navigator.geolocation.getCurrentPosition(function(p){
+          if(done)return;done=true;clearTimeout(to);
+          res({lat:p.coords.latitude,lon:p.coords.longitude,acc:p.coords.accuracy,t:Date.now()});
+        },function(){if(done)return;done=true;clearTimeout(to);res(lastPos)},{enableHighAccuracy:true,maximumAge:0,timeout:8000});
+      }catch(e){if(!done){done=true;clearTimeout(to);res(lastPos)}}
+    });
+  }
+
+  /* ---------- scanner ---------- */
+  var TITLES={ref:'Code de la facture (Data Matrix / QR)',c1:'Code-barres — appareil 1',c2:'Code-barres — appareil 2'};
+  function stopScanner(){
+    var s=scanner; scanner=null;
+    if(!s) return Promise.resolve();
+    return s.stop().then(function(){try{s.clear()}catch(e){}}).catch(function(){try{s.clear()}catch(e){}});
+  }
+  function closeOverlay(){
+    return stopScanner().then(function(){$('ov').style.display='none';busy=false});
+  }
+  function openScan(target){
+    if(busy) return; busy=true; scanTarget=target;
+    $('ovTitle').textContent=TITLES[target];
+    $('ov').style.display='flex';
+    if(!window.Html5Qrcode){
+      $('ovHint').firstChild.textContent='Scanner indisponible ici : utilisez la photo ou la saisie manuelle.';
+      return;
+    }
+    var F=Html5QrcodeSupportedFormats;
+    var formats=target==='ref'?[F.DATA_MATRIX,F.QR_CODE]:[F.CODE_128,F.CODE_39,F.CODE_93,F.EAN_13,F.EAN_8,F.UPC_A,F.UPC_E,F.ITF,F.CODABAR,F.QR_CODE,F.DATA_MATRIX];
+    scanner=new Html5Qrcode('reader',{formatsToSupport:formats,verbose:false,experimentalFeatures:{useBarCodeDetectorIfSupported:true}});
+    var cfg={fps:12,aspectRatio:undefined,qrbox:function(vw,vh){
+      var w=Math.floor(Math.min(vw,vh*1.4)*0.88);
+      return target==='ref'?{width:Math.min(w,Math.floor(vh*0.8)),height:Math.min(w,Math.floor(vh*0.8))}:{width:w,height:Math.floor(w*0.45)};
+    }};
+    scanner.start({facingMode:'environment'},cfg,function(text){onScanned(text)},function(){}).catch(function(err){
+      $('ovHint').firstChild.textContent='Caméra inaccessible ('+(err&&err.message?err.message:err)+'). Utilisez la photo ou la saisie manuelle.';
+    });
+  }
+  var handling=false;
+  function onScanned(text){
+    if(handling) return; handling=true;
+    beep();
+    var tgt=scanTarget;
+    closeOverlay().then(function(){
+      apply(tgt,text);
+      handling=false;
+      chainNext(tgt);
+    });
+  }
+  function apply(tgt,text){
+    text=(text||'').trim();
+    if(tgt==='ref'){
+      var r=extractRef(text); $('ref').value=r;
+      $('rawRef').textContent=(r!==text)?('QR brut : '+text):'';
+      var dupRef=records.some(function(x){return x.ref===r&&x.id!==editingId});
+      if(dupRef) toast('⚠ Cette référence est déjà enregistrée');
+    }else{
+      $(tgt).value=text;
+      var other=tgt==='c1'?'c2':'c1';
+      if($(other).value.trim()===text) toast('⚠ Même code que l\'autre appareil');
+      else if(records.some(function(x){return x.id!==editingId&&(x.code1===text||x.code2===text)})) toast('⚠ Ce code est déjà utilisé');
+    }
+    refresh();
+  }
+  function chainNext(tgt){
+    if(!$('chain').checked) return;
+    var next=tgt==='ref'?'c1':tgt==='c1'?'c2':null;
+    if(next && !$(next).value.trim()) setTimeout(function(){openScan(next)},350);
+  }
+  $('ovClose').addEventListener('click',function(){closeOverlay()});
+  $('scRef').addEventListener('click',function(){openScan('ref')});
+  $('sc1').addEventListener('click',function(){openScan('c1')});
+  $('sc2').addEventListener('click',function(){openScan('c2')});
+
+  $('photo').addEventListener('change',function(ev){
+    var f=ev.target.files&&ev.target.files[0]; ev.target.value='';
+    if(!f||!window.Html5Qrcode) return;
+    var tgt=scanTarget;
+    stopScanner().then(function(){
+      var F=Html5QrcodeSupportedFormats;
+      var fs=tgt==='ref'?[F.DATA_MATRIX,F.QR_CODE]:[F.CODE_128,F.CODE_39,F.CODE_93,F.EAN_13,F.EAN_8,F.UPC_A,F.UPC_E,F.ITF,F.CODABAR,F.QR_CODE,F.DATA_MATRIX];
+      var h=new Html5Qrcode('readerFile',{formatsToSupport:fs,verbose:false});
+      return h.scanFile(f,false).then(function(t){try{h.clear()}catch(e){};return t});
+    }).then(function(text){
+      $('ov').style.display='none'; busy=false; beep(); apply(tgt,text); chainNext(tgt);
+    }).catch(function(){
+      toast('Aucun code lisible sur la photo');
+      busy=false; $('ov').style.display='none';
+    });
+  });
+
+  /* ---------- enregistrement ---------- */
+  function clearForm(){
+    ['ref','c1','c2','lat','lon'].forEach(function(i){$(i).value=''}); $('okManual').checked=false; lastRef='';
+    $('rawRef').textContent=''; editingId=null; refresh();
+  }
+  $('save').addEventListener('click',function(){
+    var btn=$('save'); if(btn.disabled) return;
+    btn.disabled=true; btn.textContent='Position GPS…';
+    var mLat=num($('lat').value), mLon=num($('lon').value);
+    var p=(mLat!==null&&mLon!==null)?Promise.resolve({lat:mLat,lon:mLon,acc:null,manual:true}):freshPosition();
+    p.then(function(pos){
+      var rec={
+        id:editingId||('r'+Date.now()+Math.floor(Math.random()*1000)),
+        statut:curStatut(), ent:$('ent').value.trim(), ref:$('ref').value.trim(), code1:$('c1').value.trim(), code2:$('c2').value.trim(),
+        lon:pos?pos.lon:null, lat:pos?pos.lat:null, acc:pos&&pos.acc!=null?Math.round(pos.acc):null,
+        manual:!!(pos&&pos.manual), ts:Date.now()
+      };
+      var i=records.findIndex(function(x){return x.id===rec.id});
+      if(i>=0) records[i]=rec; else records.unshift(rec);
+      persist(); addCompany(rec.ent);
+      toast(pos?'✔ Enregistré avec position':'⚠ Enregistré SANS position');
+      clearForm();
+      window.scrollTo(0,0);
+    });
+  });
+
+  /* ---------- liste ---------- */
+  function renderList(){
+    var el=$('list');
+    if(!records.length){el.innerHTML='<div class="card small">Aucun enregistrement.</div>';$('listActs').style.display='none';return}
+    $('listActs').style.display='';
+    el.innerHTML=records.map(function(r){
+      var pos=(r.lat!=null&&r.lon!=null)?(r.lat.toFixed(6)+', '+r.lon.toFixed(6)+(r.acc!=null?' (±'+r.acc+' m)':'')+(r.manual?' · manuel':'')):'<span class="warn">sans position</span>';
+      return '<div class="rec"><label style="display:flex;gap:10px;align-items:center"><input type="checkbox" data-s="'+r.id+'"'+(sel[r.id]?' checked':'')+' style="flex:none;width:22px;height:22px"><b>'+esc(r.ref)+'</b></label>'+(r.ent?'<div class="meta">Entreprise : '+esc(r.ent)+'</div>':'')
+        +'<div class="meta">Appareil 1 : '+esc(r.code1)+'<br>Appareil 2 : '+esc(r.code2)+'<br>'+pos+'<br>'+new Date(r.ts).toLocaleString('fr-FR')+'</div>'
+        +'<div class="acts"><button class="btn sec" data-e="'+r.id+'">Modifier</button><button class="btn danger" data-d="'+r.id+'">Supprimer</button></div></div>';
+    }).join('');
+    updSel();
+  }
+  var delArm=null;
+  $('list').addEventListener('click',function(ev){
+    var b=ev.target.closest('button'); if(!b) return;
+    var e=b.getAttribute('data-e'), d=b.getAttribute('data-d');
+    if(e){
+      var r=records.find(function(x){return x.id===e}); if(!r) return;
+      editingId=r.id; if(r.ent) $('ent').value=r.ent; lastRef=r.ref; $('okManual').checked=!!(r.statut&&(r.statut.indexOf('Hors')>=0||r.statut.indexOf('Déjà')>=0)); $('ref').value=r.ref; $('c1').value=r.code1; $('c2').value=r.code2;
+      $('lat').value=r.lat!=null?r.lat:''; $('lon').value=r.lon!=null?r.lon:''; $('rawRef').textContent='';
+      showTab('new'); refresh();
+    }else if(d){
+      if(delArm===d){records=records.filter(function(x){return x.id!==d});persist();delArm=null;renderList();refresh()}
+      else{delArm=d;b.textContent='Confirmer ?';setTimeout(function(){if(delArm===d){delArm=null;b.textContent='Supprimer'}},3000)}
+    }
+  });
+  var clrArm=false;
+  $('clr').addEventListener('click',function(){
+    if(clrArm){records=[];persist();clrArm=false;$('clr').textContent='Tout supprimer';renderList();refresh()}
+    else{clrArm=true;$('clr').textContent='Confirmer : tout supprimer ?';setTimeout(function(){clrArm=false;$('clr').textContent='Tout supprimer'},3500)}
+  });
+
+  /* ---------- sélection / suppression multiple ---------- */
+  function updSel(){
+    var n=records.filter(function(r){return sel[r.id]}).length;
+    $('delSel').textContent='Supprimer la sélection ('+n+')'; $('delSel').disabled=!n;
+    $('selAll').textContent=(records.length&&n===records.length)?'Tout désélectionner':'Tout sélectionner';
+  }
+  $('list').addEventListener('change',function(ev){
+    var c=ev.target.getAttribute&&ev.target.getAttribute('data-s');
+    if(c){sel[c]=ev.target.checked;updSel()}
+  });
+  $('selAll').addEventListener('click',function(){
+    var all=records.length&&records.every(function(r){return sel[r.id]});
+    records.forEach(function(r){sel[r.id]=!all}); renderList();
+  });
+  var dsArm=false;
+  $('delSel').addEventListener('click',function(){
+    var ids=records.filter(function(r){return sel[r.id]}).map(function(r){return r.id});
+    if(!ids.length) return;
+    if(dsArm){
+      records=records.filter(function(r){return ids.indexOf(r.id)<0});
+      ids.forEach(function(i){delete sel[i]});
+      persist(); dsArm=false; renderList(); refresh(); toast('Supprimé');
+    }else{
+      dsArm=true; $('delSel').textContent='Confirmer : supprimer '+ids.length+' ?';
+      setTimeout(function(){dsArm=false;updSel()},3500);
+    }
+  });
+
+  /* ---------- entreprises ---------- */
+  function renderCompanies(){
+    $('entList').innerHTML=companies.map(function(c){return '<option value="'+esc(c)+'">'}).join('');
+    $('entChips').innerHTML=companies.map(function(c){
+      return '<span class="chipc"><button data-c="'+esc(c)+'">'+esc(c)+'</button><button class="cx" data-x="'+esc(c)+'" aria-label="Retirer">×</button></span>';
+    }).join('');
+  }
+  function addCompany(n){
+    n=(n||'').trim(); if(!n) return;
+    if(companies.indexOf(n)<0){companies.push(n);}
+    saveSettings(); renderCompanies();
+  }
+  $('entChips').addEventListener('click',function(ev){
+    var b=ev.target.closest('button'); if(!b) return;
+    var c=b.getAttribute('data-c'), x=b.getAttribute('data-x');
+    if(c!==null){$('ent').value=c;saveSettings();refresh()}
+    else if(x!==null){companies=companies.filter(function(k){return k!==x});saveSettings();renderCompanies()}
+  });
+  $('ent').addEventListener('input',function(){refresh();saveSettings()});
+
+  /* ---------- liste des références à équiper ---------- */
+  var LKEY='poseCO_list_v1';
+  function nk(s){
+    s=String(s==null?'':s).replace(/[\s\u00a0]+/g,'').replace(/\.0+$/,'');
+    return /^\d+$/.test(s)?s.replace(/^0+(?=\d)/,''):s.toUpperCase();
+  }
+  function cl(v){
+    if(typeof v==='number') return String(v).replace(/\.0+$/,'');
+    return String(v==null?'':v).replace(/[\s\u00a0]+/g,'');
+  }
+  function buildKeys(){listNk=listRefs.map(nk);listKeys=new Set(listNk);listLen=listRefs.length?domLen():0}
+  function loadList(){
+    try{var o=JSON.parse(localStorage.getItem(LKEY)||'null'); if(o&&o.refs){listRefs=o.refs;listName=o.name||'';listDate=o.date||''}}catch(e){}
+    buildKeys();
+    idbGet('listFull').then(function(v){if(v&&v.name===listName&&v.date===listDate&&v.rows){listFull=v;renderLst()}}).catch(function(){});
+  }
+  function saveList(){
+    try{localStorage.setItem(LKEY,JSON.stringify({name:listName,date:listDate,refs:listRefs}))}catch(e){toast('Liste trop grande pour le stockage')}
+  }
+  function recKeys(){return new Set(records.map(function(r){return nk(r.ref)}))}
+  function listStats(){
+    var rk=recKeys(), posed=0; listKeys.forEach(function(k){if(rk.has(k))posed++});
+    return {total:listKeys.size,posed:posed,rest:listKeys.size-posed};
+  }
+  function renderLst(){
+    if(!listKeys.size){
+      $('lstStats').textContent='Aucune liste importée : la vérification est désactivée.';
+      $('lstActs').style.display='none'; return;
+    }
+    var s=listStats();
+    $('lstStats').innerHTML='<b>'+s.total+'</b> références à équiper · <span class="ok"><b>'+s.posed+'</b> posées</span> · <span class="warn"><b>'+s.rest+'</b> restantes</span><br><span class="small">Fichier : '+esc(listName)+(listDate?' · '+esc(listDate):'')+'</span>';
+    $('lstActs').style.display='';
+  }
+
+  /* statut de la référence saisie / scannée */
+  function refStatus(){
+    var r=$('ref').value.trim(), el=$('refStatus'), wrap=$('okWrap');
+    if(r!==lastRef){$('okManual').checked=false; lastRef=r}
+    curNeed=false; curFlags={dup:false,inList:false};
+    if(!r){el.innerHTML='';wrap.style.display='none';return}
+    var k=nk(r), active=listKeys.size>0, dupRec=null;
+    records.forEach(function(x){if(x.id!==editingId&&nk(x.ref)===k)dupRec=x});
+    var inList=active&&listKeys.has(k);
+    curFlags={dup:!!dupRec,inList:inList};
+    var msg='', txt='';
+    if(active){
+      if(inList) msg+='<div class="ok"><b>✔ Dans la liste</b> : le client a droit aux détecteurs.</div>';
+      else{
+        msg+='<div class="err"><b>✖ Absente de la liste</b> : le client n\'est pas prévu pour recevoir les détecteurs.</div>';
+        curNeed=true; txt='Je confirme manuellement : poser les détecteurs quand même';
+      }
+    }else{
+      msg+='<div class="small">Aucune liste importée : vérification désactivée (onglet Liste).</div>';
+    }
+    if(dupRec){
+      msg+='<div class="warn"><b>⚠ Déjà enregistrée</b> le '+new Date(dupRec.ts).toLocaleString('fr-FR')+'.</div>';
+      curNeed=true; txt='Je confirme manuellement : enregistrer quand même';
+    }
+    el.innerHTML=msg;
+    wrap.style.display=curNeed?'flex':'none';
+    $('okTxt').textContent=txt;
+    if(!curNeed) $('okManual').checked=false;
+  }
+  function curStatut(){
+    var t=[];
+    if(listKeys.size) t.push(curFlags.inList?'Dans la liste':'Hors liste (confirmé manuellement)');
+    if(curFlags.dup) t.push('Déjà enregistré (confirmé manuellement)');
+    return t.join(' ; ');
+  }
+  $('okManual').addEventListener('change',refresh);
+
+  /* import du fichier Excel / CSV */
+  function colLetter(i){var s='';i++;while(i>0){var m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26)}return s}
+  function pendRefs(){
+    var c=+$('lstCol').value, start=$('lstHead').checked?1:0, seen={}, out=[];
+    for(var i=start;i<pend.aoa.length;i++){
+      var v=cl(pend.aoa[i][c]); if(!v) continue;
+      var k=nk(v); if(seen[k]) continue; seen[k]=1; out.push(v);
+    }
+    return out;
+  }
+  function updCount(){
+    var r=pendRefs();
+    $('lstCount').textContent=r.length+' références détectées'+(r.length?' (ex. '+r.slice(0,2).join(', ')+')':'');
+  }
+  function autoHead(){
+    var c=+$('lstCol').value, v=pend.aoa[0]?pend.aoa[0][c]:'';
+    $('lstHead').checked=/[A-Za-zÀ-ÿ]/.test(String(v==null?'':v));
+  }
+  function showPrev(){
+    var aoa=pend.aoa, nc=0;
+    aoa.slice(0,50).forEach(function(r){nc=Math.max(nc,r.length)});
+    var head=aoa[0]||[], best=-1, bestScore=-1, hit=-1;
+    for(var c=0;c<nc;c++){
+      if(hit<0&&/r[ée]f|abonn|contrat|num/i.test(String(head[c]||''))) hit=c;
+      var sc=0; aoa.slice(1,201).forEach(function(r){if(/^\d{6,}$/.test(cl(r[c]))) sc++});
+      if(sc>bestScore){bestScore=sc;best=c}
+    }
+    var pick=hit>=0?hit:(best>=0?best:0), opts='';
+    for(var i=0;i<nc;i++){
+      var h=String(head[i]==null?'':head[i]).slice(0,28);
+      opts+='<option value="'+i+'"'+(i===pick?' selected':'')+'>Colonne '+colLetter(i)+(h?' — '+esc(h):'')+'</option>';
+    }
+    $('lstCol').innerHTML=opts;
+    $('lstName').textContent=pend.name+' · '+aoa.length+' lignes';
+    $('lstPrev').style.display='';
+    autoHead(); updCount();
+  }
+  $('lstFile').addEventListener('change',function(ev){
+    var f=ev.target.files&&ev.target.files[0]; ev.target.value=''; if(!f) return;
+    if(!window.XLSX){toast('Bibliothèque Excel indisponible');return}
+    var rd=new FileReader();
+    rd.onload=function(){
+      try{
+        var wb=XLSX.read(new Uint8Array(rd.result),{type:'array'});
+        var ws=wb.Sheets[wb.SheetNames[0]];
+        var aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:''});
+        aoa=aoa.filter(function(r){return r&&r.some(function(c){return String(c).trim()!==''})});
+        if(!aoa.length){toast('Fichier vide');return}
+        pend={name:f.name,aoa:aoa}; showPrev();
+      }catch(e){toast('Fichier illisible')}
+    };
+    rd.readAsArrayBuffer(f);
+  });
+  $('lstCol').addEventListener('change',function(){autoHead();updCount()});
+  $('lstHead').addEventListener('change',updCount);
+  $('lstCancel').addEventListener('click',function(){pend=null;$('lstPrev').style.display='none'});
+  $('lstOk').addEventListener('click',function(){
+    if(!pend) return;
+    var r=pendRefs(); if(!r.length){toast('Aucune référence dans cette colonne');return}
+    var fin=r;
+    if($('lstAdd').checked){
+      var seen={}; fin=[];
+      listRefs.concat(r).forEach(function(v){var k=nk(v); if(!seen[k]){seen[k]=1;fin.push(v)}});
+    }
+    var full=makeFull(), prevFull=listFull, hadList=listRefs.length>0, addMode=$('lstAdd').checked, warnCols=false;
+    if(addMode&&hadList){
+      if(prevFull&&JSON.stringify(prevFull.header)===JSON.stringify(full.header)){
+        var sn={}, mr=[]; prevFull.rows.concat(full.rows).forEach(function(rw){var kk=nk(rw[full.col]); if(!sn[kk]){sn[kk]=1;mr.push(rw)}});
+        full={header:full.header,rows:mr,col:full.col};
+      }else{full=null;warnCols=true}
+    }
+    listRefs=fin; listName=pend.name; listDate=new Date().toLocaleDateString('fr-FR');
+    setFull(full);
+    if(warnCols) toast('Colonnes différentes : l\'export de la base sera limité aux références');
+    buildKeys(); saveList(); pend=null; $('lstPrev').style.display='none';
+    renderLst(); refresh(); toast('✔ '+fin.length+' références importées');
+  });
+
+  /* export générique .xlsx */
+  function stamp(){var d=new Date(),p=function(n){return (n<10?'0':'')+n};return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'_'+p(d.getHours())+p(d.getMinutes())}
+  function saveXlsx(rows,sheet,name,cols){
+    if(!window.XLSX){toast('Bibliothèque Excel indisponible');return}
+    var ws=XLSX.utils.aoa_to_sheet(rows); ws['!cols']=cols||[{wch:22}];
+    var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,sheet);
+    var buf=XLSX.write(wb,{type:'array',bookType:'xlsx'});
+    var blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    if(window.claude&&claude.use){
+      claude.use('downloads').then(function(dl){
+        if(!dl){toast('Téléchargement indisponible dans cette vue');return}
+        dl.save({filename:name,data:blob}).then(function(){toast('✔ Fichier prêt')}).catch(function(e){if(!e||e.code!=='declined')toast('Export impossible')});
+      });
+    }else{
+      try{var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();toast('✔ Fichier prêt')}catch(e){toast('Export impossible')}
+    }
+  }
+  $('lstRem').addEventListener('click',function(){
+    var rk=recKeys(), rows, n=0;
+    if(listFull&&listFull.rows&&listFull.rows.length){
+      rows=[listFull.header];
+      listFull.rows.forEach(function(r){var v=cl(r[listFull.col]); if(v&&!rk.has(nk(v))){rows.push(r);n++}});
+    }else{
+      rows=[['référence']]; listRefs.forEach(function(v){if(!rk.has(nk(v))){rows.push([v]);n++}});
+    }
+    if(!n){toast('Toutes les références de la liste sont posées');return}
+    saveXlsx(rows,'Base à jour','base_a_jour_'+stamp()+'.xlsx',rows[0].map(function(){return {wch:20}}));
+  });
+  var lcArm=false;
+  $('lstClr').addEventListener('click',function(){
+    if(lcArm){listRefs=[];listName='';listDate='';setFull(null);buildKeys();saveList();lcArm=false;$('lstClr').textContent='Supprimer la liste';renderLst();refresh()}
+    else{lcArm=true;$('lstClr').textContent='Confirmer : supprimer la liste ?';setTimeout(function(){lcArm=false;$('lstClr').textContent='Supprimer la liste'},3500)}
+  });
+
+  /* ---------- aide à la saisie : recherche dans la liste par quelques chiffres ---------- */
+  function domLen(){
+    var cnt={},best=0,bl=0;
+    listRefs.forEach(function(v){var l=nk(v).length;cnt[l]=(cnt[l]||0)+1;if(cnt[l]>best){best=cnt[l];bl=l}});
+    return bl;
+  }
+  function refSuggest(){
+    var box=$('refSug'), raw=$('ref').value.trim(), t=raw.replace(/\s/g,'');
+    box.innerHTML='';
+    if(!listKeys.size||!/^\d{3,}$/.test(t)) return;
+    var k=nk(t);
+    if(listKeys.has(k)||(listLen&&k.length>=listLen)) return;
+    var suf=[],pre=[],mid=[];
+    for(var i=0;i<listNk.length;i++){
+      var x=listNk[i], j=x.indexOf(k); if(j<0) continue;
+      if(x.length-j===k.length) suf.push(listRefs[i]); else if(j===0) pre.push(listRefs[i]); else mid.push(listRefs[i]);
+    }
+    var all=suf.concat(pre,mid);
+    if(!all.length){box.innerHTML='<div class="small">Aucune référence de la liste ne contient ces chiffres.</div>';return}
+    var h=document.createElement('div'); h.className='small'; h.style.marginBottom='6px';
+    h.textContent=all.length+' référence'+(all.length>1?'s':'')+' de la liste contien'+(all.length>1?'nent':'t')+' ces chiffres :';
+    box.appendChild(h);
+    all.slice(0,5).forEach(function(v){
+      var b=document.createElement('button'); b.className='btn sec';
+      b.style.cssText='display:block;width:100%;margin-bottom:6px;font-size:18px;text-align:left';
+      b.textContent=v; b.onclick=function(){$('ref').value=v;$('rawRef').textContent='';refresh()};
+      box.appendChild(b);
+    });
+    if(all.length>5){var m=document.createElement('div');m.className='small';m.textContent='… et '+(all.length-5)+' autres : tapez d\'autres chiffres pour affiner.';box.appendChild(m)}
+  }
+
+  /* ---------- base complète de la liste (toutes les colonnes) dans IndexedDB ---------- */
+  function idbOpen(){
+    return new Promise(function(res,rej){
+      var q=indexedDB.open('poseCO',1);
+      q.onupgradeneeded=function(){q.result.createObjectStore('kv')};
+      q.onsuccess=function(){res(q.result)}; q.onerror=function(){rej(q.error)};
+    });
+  }
+  function idbSet(k,v){
+    return idbOpen().then(function(db){return new Promise(function(res,rej){
+      var t=db.transaction('kv','readwrite'); t.objectStore('kv').put(v,k);
+      t.oncomplete=function(){res()}; t.onerror=function(){rej(t.error)};
+    })});
+  }
+  function idbGet(k){
+    return idbOpen().then(function(db){return new Promise(function(res,rej){
+      var r=db.transaction('kv','readonly').objectStore('kv').get(k);
+      r.onsuccess=function(){res(r.result)}; r.onerror=function(){rej(r.error)};
+    })});
+  }
+  function setFull(full){
+    listFull=full?{name:listName,date:listDate,header:full.header,rows:full.rows,col:full.col}:null;
+    try{idbSet('listFull',listFull).catch(function(){toast('Base complète non stockée : export limité aux références')})}catch(e){}
+  }
+  function makeFull(){
+    var c=+$('lstCol').value, start=$('lstHead').checked?1:0, aoa=pend.aoa, nc=0, i, j;
+    aoa.forEach(function(r){nc=Math.max(nc,r.length)});
+    var header=start?aoa[0].slice():[];
+    while(header.length<nc) header.push('');
+    header=header.map(function(h,ix){h=String(h==null?'':h).trim(); if(!start&&ix===c) h='référence'; return h||('Colonne '+colLetter(ix))});
+    var seen={}, rows=[];
+    for(i=start;i<aoa.length;i++){
+      var v=cl(aoa[i][c]); if(!v) continue;
+      var k=nk(v); if(seen[k]) continue; seen[k]=1;
+      var row=[]; for(j=0;j<nc;j++){var x=aoa[i][j]; row.push(x==null?'':x)}
+      row[c]=v; rows.push(row);
+    }
+    return {header:header,rows:rows,col:c};
+  }
+
+  /* ---------- dates ---------- */
+  var MOIS=['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+  function pad2(n){return (n<10?'0':'')+n}
+  function fmtDate(ts){var d=new Date(ts);return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())+' '+pad2(d.getHours())+':'+pad2(d.getMinutes())}
+  function parseDate(v){
+    if(v==null||v==='') return null;
+    if(typeof v==='number'){
+      if(v>20000&&v<80000){var u=new Date(Math.round((v-25569)*86400000)); return new Date(u.getUTCFullYear(),u.getUTCMonth(),u.getUTCDate(),u.getUTCHours(),u.getUTCMinutes()).getTime()}
+      return null;
+    }
+    var s=String(v).trim(), m;
+    if((m=/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T]+(\d{1,2}):(\d{2}))?/.exec(s))) return new Date(+m[1],+m[2]-1,+m[3],+(m[4]||0),+(m[5]||0)).getTime();
+    if((m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ ,T]+(\d{1,2}):(\d{2}))?/.exec(s))) return new Date(+m[3],+m[2]-1,+m[1],+(m[4]||0),+(m[5]||0)).getTime();
+    var t=Date.parse(s); return isNaN(t)?null:t;
+  }
+
+  /* ---------- import d'enregistrements d'autres appareils ---------- */
+  var impPend=null;
+  function normH(s){return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'')}
+  var HMAP={
+    ref:['reference','ref','referenceabonne','abonne','numabonne','nabonne','numeroabonne'],
+    c1:['code1','code1appareil','appareil1','detecteur1','codeappareil1'],
+    c2:['code2','code2appareil','appareil2','detecteur2','codeappareil2'],
+    lon:['longitude','lon','long','lng'], lat:['latitude','lat'],
+    ent:['entreprise','societe','company'], st:['statut','status'],
+    dt:['date','datepose','dateheure','horodatage','datesaisie']
+  };
+  function mapCols(head){
+    var m={};
+    head.forEach(function(h,i){var n=normH(h); Object.keys(HMAP).forEach(function(k){if(m[k]===undefined&&HMAP[k].indexOf(n)>=0) m[k]=i})});
+    return m;
+  }
+  function txt(v){return String(v==null?'':v).trim()}
+  function todayStr(){var d=new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())}
+  function impAnalyse(){
+    var aoa=impPend.aoa, head=aoa[0]||[], m=mapCols(head), start=1, positional=false;
+    if(m.ref===undefined){
+      m={ref:0,c1:1,c2:2,lon:3,lat:4,ent:5,st:6,dt:7}; positional=true;
+      start=(/[A-Za-zÀ-ÿ]/.test(String(head[0]==null?'':head[0]))&&!/^\d/.test(String(head[0])))?1:0;
+    }
+    var rows=[], inv=0, nodate=0, seen={}, dupIn=0;
+    for(var i=start;i<aoa.length;i++){
+      var r=aoa[i], ref=cl(r[m.ref]); if(!ref){inv++;continue}
+      var k=nk(ref); if(seen[k]){dupIn++;continue} seen[k]=1;
+      var g=function(key){return m[key]===undefined?'':r[m[key]]};
+      var rec={ref:ref,code1:txt(g('c1')),code2:txt(g('c2')),lon:num(g('lon')),lat:num(g('lat')),ent:txt(g('ent')),statut:txt(g('st')),ts:parseDate(g('dt'))};
+      if(rec.ts==null) nodate++;
+      rows.push(rec);
+    }
+    impPend.rows=rows; impPend.inv=inv; impPend.dupIn=dupIn; impPend.nodate=nodate; impPend.positional=positional;
+    var ex={}; records.forEach(function(x){ex[nk(x.ref)]=x});
+    var nNew=0,nEx=0; rows.forEach(function(x){if(ex[nk(x.ref)])nEx++;else nNew++});
+    var cols=Object.keys(m).filter(function(k){return !positional||true}).length;
+    $('impInfo').innerHTML='<b>'+esc(impPend.name)+'</b><br>'
+      +'<span class="ok"><b>'+nNew+'</b> nouveaux</span> · <span class="warn"><b>'+nEx+'</b> déjà présents</span>'
+      +(inv?' · <span class="err">'+inv+' sans référence (ignorés)</span>':'')
+      +(dupIn?' · '+dupIn+' doublons dans le fichier':'')
+      +'<br><span class="small">'+(positional?'Colonnes lues dans l\'ordre : référence, code1, code2, longitude, latitude, entreprise.':'Colonnes reconnues par leur en-tête.')+' '+nodate+' ligne'+(nodate>1?'s':'')+' sans date.</span>';
+    $('impDate').value=todayStr();
+    $('impPrev').style.display='';
+  }
+  $('impFile').addEventListener('change',function(ev){
+    var f=ev.target.files&&ev.target.files[0]; ev.target.value=''; if(!f) return;
+    if(!window.XLSX){toast('Bibliothèque Excel indisponible');return}
+    var rd=new FileReader();
+    rd.onload=function(){
+      try{
+        var wb=XLSX.read(new Uint8Array(rd.result),{type:'array'});
+        var ws=wb.Sheets[wb.SheetNames[0]];
+        var aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:''});
+        aoa=aoa.filter(function(r){return r&&r.some(function(c){return String(c).trim()!==''})});
+        if(!aoa.length){toast('Fichier vide');return}
+        impPend={name:f.name,aoa:aoa}; impAnalyse();
+      }catch(e){toast('Fichier illisible')}
+    };
+    rd.readAsArrayBuffer(f);
+  });
+  $('impCancel').addEventListener('click',function(){impPend=null;$('impPrev').style.display='none'});
+  $('impOk').addEventListener('click',function(){
+    if(!impPend||!impPend.rows) return;
+    var dupMode=$('impDup').value, dv=$('impDate').value||todayStr(), p=dv.split('-');
+    var fallback=new Date(+p[0],+p[1]-1,+p[2],12,0).getTime();
+    var ex={}; records.forEach(function(x){ex[nk(x.ref)]=x});
+    var added=0, replaced=0, skipped=0, ents={};
+    impPend.rows.forEach(function(r){
+      var k=nk(r.ref), ts=r.ts!=null?r.ts:fallback, st=r.statut;
+      if(!st&&listKeys.size) st=listKeys.has(k)?'Dans la liste':'Hors liste (importé)';
+      if(r.ent) ents[r.ent]=1;
+      var cur=ex[k];
+      if(cur){
+        if(dupMode==='rep'){cur.code1=r.code1;cur.code2=r.code2;cur.lon=r.lon;cur.lat=r.lat;cur.ent=r.ent;cur.statut=st;cur.ts=ts;cur.acc=null;cur.manual=false;replaced++}
+        else skipped++;
+      }else{
+        var rec={id:'i'+Date.now()+Math.floor(Math.random()*1e6)+added,ref:r.ref,code1:r.code1,code2:r.code2,lon:r.lon,lat:r.lat,acc:null,manual:false,ent:r.ent,statut:st,ts:ts,imp:true};
+        records.push(rec); ex[k]=rec; added++;
+      }
+    });
+    records.sort(function(a,b){return b.ts-a.ts});
+    persist(); Object.keys(ents).forEach(addCompany);
+    // codes utilisés plusieurs fois
+    var cc={}, conflicts=0;
+    records.forEach(function(x){[x.code1,x.code2].forEach(function(c){if(c){cc[c]=(cc[c]||0)+1}})});
+    Object.keys(cc).forEach(function(c){if(cc[c]>1)conflicts++});
+    $('impRes').innerHTML='<span class="ok">✔ Import terminé : <b>'+added+'</b> ajoutés</span>'+(replaced?' · '+replaced+' remplacés':'')+(skipped?' · '+skipped+' ignorés (déjà présents)':'')
+      +(conflicts?'<br><span class="warn">⚠ '+conflicts+' code(s) d\'appareil apparaissent sur plusieurs enregistrements.</span>':'');
+    impPend=null; $('impPrev').style.display='none';
+    renderList(); refresh();
+  });
+
+  /* ---------- statistiques ---------- */
+  var stInit=false, stLast=null;
+  function nDet(r){return (r.code1?1:0)+(r.code2?1:0)}
+  function stFilter(){
+    var mode=$('stMode').value, ent=$('stEnt').value, day=$('stDay').value, mon=$('stMonth').value, yr=$('stYear').value, out=[];
+    records.forEach(function(r){
+      var d=new Date(r.ts), ok=true, e=r.ent||'';
+      if(mode==='day') ok=!!day&&(d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())===day);
+      else if(mode==='month') ok=!!mon&&((d.getFullYear()+'-'+pad2(d.getMonth()+1))===mon);
+      else if(mode==='year') ok=!!yr&&(String(d.getFullYear())===yr);
+      if(!ok) return;
+      if(ent==='*'||(ent==='__none'&&!e)||ent===e) out.push(r);
+    });
+    return out;
+  }
+  function barHtml(rows){
+    var max=1; rows.forEach(function(r){if(r.n>max)max=r.n});
+    return rows.map(function(r){
+      return '<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:8px"><span>'+esc(r.k)+'</span><span><b>'+r.n+'</b> abonnés · '+r.d+' détecteurs</span></div>'
+        +'<div style="height:8px;background:var(--line);border-radius:4px;margin-top:4px"><div style="height:8px;width:'+Math.round(100*r.n/max)+'%;background:var(--accent);border-radius:4px"></div></div></div>';
+    }).join('')||'<div class="small">Aucune donnée pour cette sélection.</div>';
+  }
+  function stCompute(){
+    var rs=stFilter(), mode=$('stMode').value, ent=$('stEnt').value;
+    var n=rs.length, det=0, hors=0, nogps=0;
+    rs.forEach(function(r){det+=nDet(r); if(r.statut&&r.statut.indexOf('Hors')>=0) hors++; if(r.lat==null||r.lon==null) nogps++});
+    var be={}; rs.forEach(function(r){var e=r.ent||'(sans entreprise)'; be[e]=be[e]||{n:0,d:0}; be[e].n++; be[e].d+=nDet(r)});
+    var entRows=Object.keys(be).map(function(k){return {k:k,n:be[k].n,d:be[k].d}}).sort(function(a,b){return b.n-a.n});
+    var g={};
+    rs.forEach(function(r){
+      var d=new Date(r.ts), k, lab;
+      if(mode==='day'){k=pad2(d.getHours());lab=k+' h'}
+      else if(mode==='month'){k=pad2(d.getDate());lab=pad2(d.getDate())+'/'+pad2(d.getMonth()+1)}
+      else if(mode==='year'){k=pad2(d.getMonth()+1);lab=MOIS[d.getMonth()]}
+      else{k=d.getFullYear()+'-'+pad2(d.getMonth()+1);lab=MOIS[d.getMonth()]+' '+d.getFullYear()}
+      if(!g[k]) g[k]={k:lab,n:0,d:0}; g[k].n++; g[k].d+=nDet(r);
+    });
+    var evo=Object.keys(g).sort().map(function(k){return g[k]});
+    var label=mode==='day'?'Jour : '+($('stDay').value||'—'):mode==='month'?'Mois : '+($('stMonth').value||'—'):mode==='year'?'Année : '+$('stYear').value:'Complet (toutes les dates)';
+    var entLabel=ent==='*'?'Toutes les entreprises':ent==='__none'?'(sans entreprise)':ent;
+    var evoTitle=mode==='day'?'Par heure':mode==='month'?'Par jour':mode==='year'?'Par mois':'Par mois (tout)';
+    var html='<div class="card"><h2>'+esc(label)+' <span class="small">'+esc(entLabel)+'</span></h2>'
+      +'<div style="display:flex;gap:10px;flex-wrap:wrap">'
+      +'<div style="flex:1;min-width:120px"><div style="font-size:30px;font-weight:800">'+n+'</div><div class="small">abonnés équipés</div></div>'
+      +'<div style="flex:1;min-width:120px"><div style="font-size:30px;font-weight:800">'+det+'</div><div class="small">détecteurs posés</div></div></div>'
+      +'<div class="small" style="margin-top:8px">'+(hors?'<span class="warn">'+hors+' hors liste (confirmés)</span> · ':'')+nogps+' sans position GPS</div></div>';
+    if(ent==='*') html+='<div class="card"><h2>Par entreprise</h2>'+barHtml(entRows)+'</div>';
+    html+='<div class="card"><h2>'+evoTitle+'</h2>'+barHtml(evo)+'</div>';
+    if(listKeys.size){
+      var s=listStats();
+      html+='<div class="card"><h2>Base à équiper <span class="small">toutes périodes</span></h2><b>'+s.total+'</b> au total · <span class="ok"><b>'+s.posed+'</b> posées</span> · <span class="warn"><b>'+s.rest+'</b> restantes</span></div>';
+    }
+    return {html:html,label:label,entLabel:entLabel,n:n,det:det,hors:hors,nogps:nogps,entRows:entRows,evo:evo,evoTitle:evoTitle,showEnt:ent==='*'};
+  }
+  function renderStats(){
+    var now=new Date();
+    if(!stInit){
+      $('stDay').value=todayStr(); $('stMonth').value=now.getFullYear()+'-'+pad2(now.getMonth()+1); stInit=true;
+    }
+    var curEnt=$('stEnt').value||'*', ents={}, years={};
+    records.forEach(function(r){ents[r.ent||'']=1; years[new Date(r.ts).getFullYear()]=1});
+    var eh='<option value="*">Toutes les entreprises</option>';
+    Object.keys(ents).filter(Boolean).sort().forEach(function(e){eh+='<option value="'+esc(e)+'">'+esc(e)+'</option>'});
+    if(ents['']) eh+='<option value="__none">(sans entreprise)</option>';
+    $('stEnt').innerHTML=eh; $('stEnt').value=curEnt; if($('stEnt').value!==curEnt) $('stEnt').value='*';
+    var curY=$('stYear').value, ys=Object.keys(years).map(Number).sort(function(a,b){return b-a});
+    if(!ys.length) ys=[now.getFullYear()];
+    $('stYear').innerHTML=ys.map(function(y){return '<option>'+y+'</option>'}).join('');
+    if(curY&&ys.indexOf(+curY)>=0) $('stYear').value=curY;
+    var mode=$('stMode').value;
+    $('stDay').style.display=mode==='day'?'':'none'; $('stMonth').style.display=mode==='month'?'':'none'; $('stYear').style.display=mode==='year'?'':'none';
+    stLast=stCompute(); $('stOut').innerHTML=stLast.html;
+  }
+  ['stMode','stDay','stMonth','stYear','stEnt'].forEach(function(id){$(id).addEventListener('change',renderStats)});
+  $('stExp').addEventListener('click',function(){
+    var s=stLast||stCompute();
+    var rows=[['Statistiques - Pose détecteurs CO'],['Période',s.label],['Entreprise',s.entLabel],[],
+      ['Abonnés équipés',s.n],['Détecteurs posés',s.det],['Hors liste (confirmés)',s.hors],['Sans position GPS',s.nogps],[]];
+    if(s.showEnt){rows.push(['Par entreprise','Abonnés','Détecteurs']); s.entRows.forEach(function(r){rows.push([r.k,r.n,r.d])}); rows.push([])}
+    rows.push([s.evoTitle,'Abonnés','Détecteurs']); s.evo.forEach(function(r){rows.push([r.k,r.n,r.d])});
+    saveXlsx(rows,'Statistiques','statistiques_'+stamp()+'.xlsx',[{wch:30},{wch:14},{wch:14}]);
+  });
+
+  /* ---------- export Excel ---------- */
+  $('exp').addEventListener('click',function(){
+    if(!records.length){toast('Rien à exporter');return}
+    if(!window.XLSX){toast('Bibliothèque Excel indisponible');return}
+    var rows=[['référence','code1','code2','longitude','latitude','entreprise','statut','date']];
+    records.slice().reverse().forEach(function(r){rows.push([r.ref,r.code1,r.code2,r.lon!=null?r.lon:'',r.lat!=null?r.lat:'',r.ent||'',r.statut||'',fmtDate(r.ts)])});
+    var ws=XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols']=[{wch:22},{wch:22},{wch:22},{wch:14},{wch:14},{wch:24},{wch:40},{wch:17}];
+    var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Détecteurs CO');
+    var buf=XLSX.write(wb,{type:'array',bookType:'xlsx'});
+    var d=new Date(), pad=function(n){return (n<10?'0':'')+n};
+    var name='detecteurs_co_'+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'_'+pad(d.getHours())+pad(d.getMinutes())+'.xlsx';
+    var blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    var done=function(){toast('✔ Fichier prêt')};
+    var fail=function(m){toast(m)};
+    if(window.claude&&claude.use){
+      claude.use('downloads').then(function(dl){
+        if(!dl){fail('Téléchargement indisponible dans cette vue');return}
+        dl.save({filename:name,data:blob}).then(done).catch(function(e){if(!e||e.code!=='declined')fail('Export impossible ('+(e&&e.code||'erreur')+')')});
+      });
+    }else{
+      try{var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();done()}catch(e){fail('Export impossible')}
+    }
+  });
+
+  /* ---------- onglets ---------- */
+  function showTab(t){
+    var n=t==='new';
+    $('viewNew').style.display=n?'':'none'; $('viewList').style.display=(t==='list')?'':'none'; $('viewLst').style.display=(t==='lst')?'':'none'; $('viewSt').style.display=(t==='st')?'':'none';
+    $('saveBar').style.display=n?'':'none';
+    $('tabNew').classList.toggle('on',n); $('tabList').classList.toggle('on',t==='list'); $('tabLst').classList.toggle('on',t==='lst'); $('tabSt').classList.toggle('on',t==='st');
+    if(t==='list') renderList(); if(t==='lst') renderLst(); if(t==='st') renderStats();
+  }
+  $('tabNew').addEventListener('click',function(){showTab('new')});
+  $('tabList').addEventListener('click',function(){showTab('list')});
+  $('tabLst').addEventListener('click',function(){showTab('lst')});
+  $('tabSt').addEventListener('click',function(){showTab('st')});
+
+  load(); loadList(); renderCompanies(); refresh(); startWatch();
+})();
+</script>
+<script>
+if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}
+</script>
+</body>
+</html>
